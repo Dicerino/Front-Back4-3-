@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Магазин</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Магазин</h1>
+  <div id="products"></div>
+  <h2>Чат поддержки</h2>
+  <div id="chat"></div>
+  <input id="chat-input" placeholder="Введите сообщение">
+  <button id="send-message">Отправить</button>
+  <script>
+    const productsContainer = document.getElementById('products');
+    const chatContainer = document.getElementById('chat');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
+    async function loadProducts() {
+      const res = await fetch('/graphql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: "{ products { id name price } }" })
+      });
+      const data = await res.json();
+      productsContainer.innerHTML = "";
+      data.data.products.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "product-card";
+        card.innerHTML = "<h2>" + p.name + "</h2><p>Цена: " + p.price + "</p>";
+        productsContainer.appendChild(card);
+      });
+    }
+    loadProducts();
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.onmessage = (event) => {
+      const msgElem = document.createElement('div');
+      msgElem.textContent = event.data;
+      chatContainer.appendChild(msgElem);
+    };
+    sendButton.addEventListener('click', () => {
+      ws.send(chatInput.value);
+      chatInput.value = "";
+    });
+  </script>
+</body>
+</html>

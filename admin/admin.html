@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админ-панель</title>
+</head>
+<body>
+  <h1>Админ-панель</h1>
+  <h2>Чат поддержки</h2>
+  <div id="chat"></div>
+  <input id="chat-input" placeholder="Введите сообщение">
+  <button id="send-message">Отправить</button>
+  <h2>Добавить товар</h2>
+  <form id="addForm">
+    <input type="text" name="name" placeholder="Название">
+    <input type="text" name="description" placeholder="Описание">
+    <input type="number" name="price" placeholder="Цена">
+    <input type="text" name="categories" placeholder="Категории через запятую">
+    <button type="submit">Добавить</button>
+  </form>
+  <h2>Редактировать товар</h2>
+  <form id="editForm">
+    <input type="number" name="id" placeholder="ID">
+    <input type="text" name="name" placeholder="Новое название">
+    <input type="text" name="description" placeholder="Новое описание">
+    <input type="number" name="price" placeholder="Новая цена">
+    <input type="text" name="categories" placeholder="Новые категории через запятую">
+    <button type="submit">Редактировать</button>
+  </form>
+  <h2>Удалить товар</h2>
+  <form id="deleteForm">
+    <input type="number" name="id" placeholder="ID">
+    <button type="submit">Удалить</button>
+  </form>
+  <script>
+    const chatContainer = document.getElementById('chat');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
+    const addForm = document.getElementById('addForm');
+    const editForm = document.getElementById('editForm');
+    const deleteForm = document.getElementById('deleteForm');
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.onmessage = event => {
+      const msgElem = document.createElement('div');
+      msgElem.textContent = event.data;
+      chatContainer.appendChild(msgElem);
+    };
+    sendButton.addEventListener('click', () => {
+      ws.send(chatInput.value);
+      chatInput.value = "";
+    });
+    addForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const formData = new FormData(addForm);
+      const body = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        price: Number(formData.get('price')),
+        categories: formData.get('categories').split(',').map(c => c.trim())
+      };
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    });
+    editForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const formData = new FormData(editForm);
+      const id = formData.get('id');
+      const body = {};
+      if (formData.get('name')) body.name = formData.get('name');
+      if (formData.get('description')) body.description = formData.get('description');
+      if (formData.get('price')) body.price = Number(formData.get('price'));
+      if (formData.get('categories')) body.categories = formData.get('categories').split(',').map(c => c.trim());
+      await fetch('/api/products/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    });
+    deleteForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const formData = new FormData(deleteForm);
+      const id = formData.get('id');
+      await fetch('/api/products/' + id, { method: 'DELETE' });
+    });
+  </script>
+</body>
+</html>
